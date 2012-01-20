@@ -41,7 +41,7 @@
     <Reference Include="System.Dynamic" />
     <Reference Include="System.Core" />
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\Newtonsoft.Json.dll</HintPath>
+      <HintPath>Newtonsoft.Json.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>

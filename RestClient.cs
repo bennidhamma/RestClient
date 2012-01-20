@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using Newtonsoft.Json;
 using System.IO;
+using Newtonsoft.Json.Linq;
 
 namespace ForgottenArts.RestClient
 {
@@ -28,45 +29,58 @@ namespace ForgottenArts.RestClient
 		public void AddHeader (string name, string val)
 		{
 			wc.Headers.Add (name, val);
-		}
+		}		
 		
-		public DynamicDictionary Get (string endpoint)
+		private dynamic DoRequest(string verb, Func<string> func)
 		{
-			JsonSerializer ser = new JsonSerializer ();
-			return ser.Deserialize<DynamicDictionary> (new JsonTextReader (new StreamReader (wc.OpenRead (server + endpoint))));
-		}
-		
-		public dynamic Post (string endpoint, object postData)
-		{
-			string jsonPost =  JsonConvert.SerializeObject (postData);
-			//Console.WriteLine ("Posting {0} to {1}", jsonPost, server + endpoint);
 			string resp = null;
 			try
-			{				
-				resp = wc.UploadString (server + endpoint, "POST", jsonPost);
+			{			
+				resp = func();
 			}
 			catch (WebException we)
 			{
 				StreamReader sr = new StreamReader (we.Response.GetResponseStream ());
 				Console.Error.WriteLine ( sr.ReadToEnd ());
-				throw new Exception ("Error in POST", we);
+				throw new Exception ("Error in " + verb, we);
 			}
-			return JsonConvert.DeserializeObject<DynamicDictionary>(resp);
+			if (resp.StartsWith ("["))
+			    return JArray.Parse (resp);
+			else
+			    return JsonConvert.DeserializeObject<DynamicDictionary>(resp);	
 		}
 		
-		public DynamicDictionary Put (string endpoint, object postData)
+		public dynamic Get (string endpoint)
 		{
-			string resp = wc.UploadString (server + endpoint, "PUT", JsonConvert.SerializeObject (postData));
-			return JsonConvert.DeserializeObject<DynamicDictionary>(resp);
+			return DoRequest("GET", delegate {
+				return new StreamReader (wc.OpenRead(server + endpoint)).ReadToEnd ();
+			});
 		}
 		
-		public DynamicDictionary Delete (string endpoint)
+		public dynamic Post (string endpoint, object postData)
 		{
-			var req= wc.GetRequest (server + endpoint);
-			req.Method = "DELETE";
-			var resp = req.GetResponse ();
-			JsonSerializer ser = new JsonSerializer ();
-			return ser.Deserialize<DynamicDictionary> (new JsonTextReader (new StreamReader (resp.GetResponseStream ())));
+			string jsonPost =  JsonConvert.SerializeObject (postData);
+			return DoRequest("POST", delegate {
+				return wc.UploadString (server + endpoint, "POST", jsonPost).Trim();
+			});
+		}
+		
+		public dynamic Put (string endpoint, object postData)
+		{
+			string jsonPost =  JsonConvert.SerializeObject (postData);
+			return DoRequest("PUT", delegate {
+				return wc.UploadString (server + endpoint, "PUT", jsonPost).Trim();
+			});
+		}
+		
+		public dynamic Delete (string endpoint)
+		{
+			return DoRequest("DELETE", delegate {
+				var req = wc.GetRequest (server + endpoint);
+				req.Method = "DELETE";
+				var resp = req.GetResponse ();
+				return new StreamReader (resp.GetResponseStream()).ReadToEnd ();
+			});
 		}
 	}
 	
