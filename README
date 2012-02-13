@@ -8,7 +8,7 @@ an example:
 
 	rc.Post ("story/1234/comments", {author: "ben", message: "this is a comment"});
 	
-	foreach (var comment in rc.Get("story/1234/comments"))
+	foreach (dynamic comment in rc.Get("story/1234/comments"))
 	{
 		Console.WriteLine ("Author: {0}\n, Date: {1}\n, Comment: {2}\n\n", comment.author, comment.date, comment.message);
 	}
